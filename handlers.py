@@ -351,9 +351,6 @@ async def order_status_button(message: Message):
 
 
 async def show_bonuses(message: Message):
-    """
-    Показывает информацию о бонусах пользователя
-    """
     user_id = message.from_user.id
 
     if user_id not in user_bonuses:
@@ -1018,5 +1015,4 @@ async def register_handlers(router):
     router.message.register(back_to_menu, F.text == "⬅️ Назад в меню")
     router.message.register(process_bonus_amount, PromoState.waiting_for_bonus_amount)
 
-    # Неизвестные команды (должен быть последним)
     router.message.register(unknown_command)
