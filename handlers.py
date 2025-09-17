@@ -8,7 +8,8 @@ from states import OrderState, PromoState
 from keyboards import main_keyboard, size_keyboard, bonus_keyboard
 from database import user_orders, user_promos, promo_codes, user_bonuses, loyalty_levels
 from payment import create_payment, check_payment_status
-from utils import check_order_status, calculate_level, add_bonuses
+from utils import check_order_status, calculate_level, add_bonuses, format_time_remaining
+
 
 
 async def start_command(message: Message):
@@ -76,8 +77,21 @@ async def help_command(message: Message):
 
 
 async def show_menu(message: Message):
+    """
+        Обработчик команды /menu - показывает меню ресторана
+        """
+
     # Парсинг аргументов команды
+    # Разбиваем текст сообщения на части по пробелам
+    # Например: "/menu classic" → ["/menu", "classic"]
     command_parts = message.text.split()
+
+    # Определяем категорию меню для показа:
+    # - Если в команде есть второй аргумент (индекс 1), берем его и приводим к нижнему регистру
+    # - Если аргументов нет или только один, используем "all" (показать всё меню)
+    # Пример:
+    #   "/menu classic" → category = "classic"
+    #   "/menu" → category = "all"
     category = command_parts[1].lower() if len(command_parts) > 1 else "all"
 
     menu_items = {
@@ -190,6 +204,7 @@ async def process_ingredients(message: Message, state: FSMContext):
 
     # Генерация номера заказа
     order_number = random.randint(1000, 9999)
+    # Фиксированное время готовности: текущее время + 10 минут
     order_time = datetime.now() + timedelta(minutes=10)
 
     # ИНИЦИАЛИЗАЦИЯ ПОЛЬЗОВАТЕЛЯ В БОНУСНОЙ СИСТЕМЕ ЕСЛИ ЕГО ЕЩЕ НЕТ
@@ -234,7 +249,7 @@ async def process_ingredients(message: Message, state: FSMContext):
 
     response += (
         f"**Бонусов к начислению:** {bonus_earned} ({cashback_percent}%)\n"
-        f"**Примерное время готовности:** {order_time.strftime('%H:%M')}\n\n"
+        f"**Время готовности:** {order_time.strftime('%H:%M')}\n\n"  # Изменено на фиксированное время
         "Для оплаты заказа нажмите кнопку ниже 👇"
     )
 
@@ -332,7 +347,7 @@ async def order_status_button(message: Message):
     response = "📦 **Ваши заказы:**\n\n"
     for order in user_orders[user_id]['orders']:
         order = check_order_status(order)
-        order_status_emoji = "✅" if "Готов" in order['status'] else "⏳" if "обработк" in order['status'] else "📦"
+        order_status_emoji = "✅" if "Готов" in order['status'] else "⏳" if "обработка" in order['status'] else "📦"
 
         response += (
             f"{order_status_emoji} **Заказ #{order['number']}** - {order['status']}\n"
@@ -351,6 +366,9 @@ async def order_status_button(message: Message):
 
 
 async def show_bonuses(message: Message):
+    """
+    Показывает информацию о бонусах пользователя
+    """
     user_id = message.from_user.id
 
     if user_id not in user_bonuses:
@@ -1015,4 +1033,5 @@ async def register_handlers(router):
     router.message.register(back_to_menu, F.text == "⬅️ Назад в меню")
     router.message.register(process_bonus_amount, PromoState.waiting_for_bonus_amount)
 
+    # Неизвестные команды
     router.message.register(unknown_command)
