@@ -1,13 +1,12 @@
 from datetime import datetime
 from database import user_bonuses, loyalty_levels
 
-
 def check_order_status(order):
     current_time = datetime.now()
 
     if isinstance(order, dict) and 'status' in order:
-        if order['status'] in ['В обработке', 'В обработке (альтернативная)'] and current_time >= order[
-            'estimated_time']:
+        # Для заказов с фиксированным временем готовности
+        if order['status'] in ['В обработке', 'В обработке (альтернативная)'] and current_time >= order['estimated_time']:
             order['status'] = '✅ Готов к выдаче'
         elif order['status'] == 'Ожидает оплаты (альтернативная)':
             pass
@@ -51,28 +50,27 @@ async def add_bonuses(user_id, order_amount, bonus_earned):
     # Пересчитываем уровень лояльности
     user_bonuses[user_id]['loyalty_level'] = calculate_level(user_bonuses[user_id]['total_spent'])
 
-
 def format_time_remaining(estimated_time):
     """
     Форматирует оставшееся время до готовности заказа
     """
+    from datetime import datetime
     current_time = datetime.now()
-    time_diff = estimated_time - current_time
 
-    if time_diff.total_seconds() <= 0:
-        return "готов ✅"
+    if estimated_time > current_time:
+        time_diff = estimated_time - current_time
+        minutes = time_diff.total_seconds() // 60
 
-    minutes = int(time_diff.total_seconds() // 60)
-    seconds = int(time_diff.total_seconds() % 60)
-
-    if minutes < 1:
-        return f"{seconds} сек"
-    elif minutes < 60:
-        return f"{minutes} мин"
+        if minutes <= 0:
+            return "готов к выдаче"
+        elif minutes < 60:
+            return f"{int(minutes)} минут"
+        else:
+            hours = minutes // 60
+            remaining_minutes = minutes % 60
+            return f"{int(hours)} часов {int(remaining_minutes)} минут"
     else:
-        hours = minutes // 60
-        minutes = minutes % 60
-        return f"{hours} ч {minutes} мин"
+        return "готов к выдаче"
 
 def calculate_discount_price(original_price, discount_percent):
     """
